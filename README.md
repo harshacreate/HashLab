@@ -17,5 +17,8 @@ HashLab hashes text or files with SHA-1/256/384/512 via the Web Crypto API and l
 ## Tech
 Vanilla JavaScript + the Web Crypto API · responsive single-page UI · no dependencies.
 
+## Notes
+SHA-1 is included for legacy compatibility; do not use it for new security-sensitive integrity checks. Files are read into browser memory before hashing, so very large files may not be practical.
+
 ## License
 MIT © 2025 Harsha Malepati

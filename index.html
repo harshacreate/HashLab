@@ -52,22 +52,24 @@
 <script>
 const $=id=>document.getElementById(id);
 const ALGS=[["SHA-1","SHA-1"],["SHA-256","SHA-256"],["SHA-384","SHA-384"],["SHA-512","SHA-512"]];
-let current={};
+let current={},requestId=0;
 function hex(buf){return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("")}
-async function digestAll(bytes){
+async function digestAll(bytes,request=++requestId){
   const out={};
-  for(const[label,alg]of ALGS){out[label]=hex(await crypto.subtle.digest(alg,bytes))}
+  try{for(const[label,alg]of ALGS){out[label]=hex(await crypto.subtle.digest(alg,bytes))}}
+  catch{if(request===requestId)$('verdict').innerHTML='<div class="verdict v-bad">Hashing failed in this browser.</div>';return}
+  if(request!==requestId)return;
   current=out;render();compare();
 }
 function render(){
   $('hashes').innerHTML=ALGS.map(([l])=>`<div class="hrow"><span class="alg">${l}</span><span class="dig">${current[l]||'—'}</span></div>`).join('');
 }
-function hashText(){$('dropLabel').textContent='Choose or drop a file';const t=$('text').value;if(!t){current={};render();return}digestAll(new TextEncoder().encode(t))}
+function hashText(){const request=++requestId;$('dropLabel').textContent='Choose or drop a file';const t=$('text').value;if(!t){current={};render();compare();return}digestAll(new TextEncoder().encode(t),request)}
 function wireDrop(){const d=$('drop'),f=$('file');
   d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');
   d.ondrop=e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0])doFile(e.dataTransfer.files[0])};
   f.onchange=()=>{if(f.files[0])doFile(f.files[0])};}
-function doFile(file){$('dropLabel').textContent='📄 '+file.name+' ('+file.size+' bytes)';$('text').value='';const fr=new FileReader();fr.onload=()=>digestAll(fr.result);fr.readAsArrayBuffer(file)}
+function doFile(file){const request=++requestId;$('dropLabel').textContent='📄 '+file.name+' ('+file.size+' bytes)';$('text').value='';const fr=new FileReader();fr.onload=()=>{if(request===requestId)digestAll(fr.result,request)};fr.readAsArrayBuffer(file)}
 function compare(){const e=$('expected').value.trim().toLowerCase();if(!e||!current['SHA-256']){$('verdict').innerHTML='';return}
   const match=Object.values(current).some(h=>h.toLowerCase()===e);
   $('verdict').innerHTML=match?'<div class="verdict v-ok">✓ Match — the hash corresponds to this input (integrity confirmed).</div>':'<div class="verdict v-bad">✗ No match — this input does not produce the expected hash.</div>';
